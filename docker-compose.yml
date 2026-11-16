@@ -1,0 +1,26 @@
+services:
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+      MYSQL_DATABASE: fleet_dispatch
+    ports:
+      - "3307:3306"
+    volumes:
+      - ./migrations/001_init.sql:/docker-entrypoint-initdb.d/001_init.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      APP_PORT: "8080"
+      DB_DSN: "root:@tcp(mysql:3306)/fleet_dispatch?parseTime=true&loc=Local"
+    depends_on:
+      mysql:
+        condition: service_healthy
