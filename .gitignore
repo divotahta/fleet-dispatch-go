@@ -1,0 +1,15 @@
+# Binaries
+*.exe
+bin/
+dist/
+
+# Test & coverage
+coverage.out
+*.test
+
+# Environment & IDE
+.env
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
