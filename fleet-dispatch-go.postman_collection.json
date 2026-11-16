@@ -1,0 +1,149 @@
+{
+  "info": {
+    "_postman_id": "f4c1a8d0-0002-4a9b-8e21-000000000002",
+    "name": "Fleet Dispatch Go",
+    "description": "Koleksi pengujian REST API Fleet Dispatch Service (fleet-dispatch-go).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8080",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/health",
+          "host": ["{{base_url}}"],
+          "path": ["health"]
+        }
+      }
+    },
+    {
+      "name": "2. Register Driver (201 Created)",
+      "request": {
+        "method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"nama\": \"Pak Budi\",\n  \"nomor_lambung\": \"BBD-101\",\n  \"lat\": -6.244,\n  \"lng\": 106.825\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/drivers",
+          "host": ["{{base_url}}"],
+          "path": ["drivers"]
+        }
+      }
+    },
+    {
+      "name": "3. List Drivers (200 OK)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/drivers",
+          "host": ["{{base_url}}"],
+          "path": ["drivers"]
+        }
+      }
+    },
+    {
+      "name": "4. Update Driver Location (200 OK)",
+      "request": {
+        "method": "PATCH",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"lat\": -6.245,\n  \"lng\": 106.826,\n  \"status\": \"available\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/drivers/1/location",
+          "host": ["{{base_url}}"],
+          "path": ["drivers", "1", "location"]
+        }
+      }
+    },
+    {
+      "name": "5. Create Order / Auto-Dispatch (201 Created)",
+      "request": {
+        "method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"penumpang\": \"Andi\",\n  \"pickup_lat\": -6.244,\n  \"pickup_lng\": 106.825,\n  \"dropoff_lat\": -6.225,\n  \"dropoff_lng\": 106.830\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/orders",
+          "host": ["{{base_url}}"],
+          "path": ["orders"]
+        }
+      }
+    },
+    {
+      "name": "6. Get Order by ID (200 OK)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/orders/1",
+          "host": ["{{base_url}}"],
+          "path": ["orders", "1"]
+        }
+      }
+    },
+    {
+      "name": "7. Update Order -> picked_up (200 OK)",
+      "request": {
+        "method": "PATCH",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"status\": \"picked_up\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/orders/1/status",
+          "host": ["{{base_url}}"],
+          "path": ["orders", "1", "status"]
+        }
+      }
+    },
+    {
+      "name": "8. Update Order -> completed (200 OK)",
+      "request": {
+        "method": "PATCH",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"status\": \"completed\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/orders/1/status",
+          "host": ["{{base_url}}"],
+          "path": ["orders", "1", "status"]
+        }
+      }
+    },
+    {
+      "name": "9. Invalid State Transition (409 Conflict)",
+      "request": {
+        "method": "PATCH",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"status\": \"cancelled\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/orders/1/status",
+          "host": ["{{base_url}}"],
+          "path": ["orders", "1", "status"]
+        }
+      }
+    }
+  ]
+}
