@@ -1,12 +1,15 @@
 package main
 
 import (
+	"bufio"
 	"context"
+	"database/sql"
 	"errors"
 	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -14,10 +17,13 @@ import (
 	"fleet-dispatch-go/internal/handler"
 	"fleet-dispatch-go/internal/repository"
 	"fleet-dispatch-go/internal/service"
+
+	_ "github.com/go-sql-driver/mysql"
 )
 
 func main() {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
+	loadDotEnv(".env")
 
 	telemetryCh := make(chan handler.TelemetryEvent, 64)
 	var wg sync.WaitGroup
@@ -31,11 +37,17 @@ func main() {
 		}
 	}()
 
-	repo := repository.NewMemoryRepository()
+	repo, cleanupDB, err := initRepository(logger)
+	if err != nil {
+		logger.Error("gagal menyiapkan repository", "error", err)
+		os.Exit(1)
+	}
+	defer cleanupDB()
+
 	svc := service.NewDispatchService(repo)
 	h := handler.NewHandler(svc, logger, telemetryCh)
 
-	port := os.Getenv("APP_PORT")
+	port := strings.TrimSpace(os.Getenv("APP_PORT"))
 	if port == "" {
 		port = "8080"
 	}
@@ -75,4 +87,56 @@ func main() {
 	close(telemetryCh)
 	wg.Wait()
 	logger.Info("server berhenti dengan bersih")
+}
+
+func initRepository(logger *slog.Logger) (repository.FleetRepository, func(), error) {
+	dsn := strings.TrimSpace(os.Getenv("DB_DSN"))
+	if dsn == "" {
+		logger.Info("DB_DSN kosong, menggunakan MemoryRepository (in-memory)")
+		return repository.NewMemoryRepository(), func() {}, nil
+	}
+
+	db, err := sql.Open("mysql", dsn)
+	if err != nil {
+		return nil, nil, err
+	}
+	db.SetMaxOpenConns(10)
+	db.SetMaxIdleConns(5)
+	db.SetConnMaxLifetime(30 * time.Minute)
+
+	pingCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := db.PingContext(pingCtx); err != nil {
+		_ = db.Close()
+		return nil, nil, err
+	}
+
+	logger.Info("terhubung ke MySQL, menggunakan MySQLRepository")
+	return repository.NewMySQLRepository(db), func() { _ = db.Close() }, nil
+}
+
+func loadDotEnv(path string) {
+	f, err := os.Open(path)
+	if err != nil {
+		return
+	}
+	defer f.Close()
+
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		key, val, ok := strings.Cut(line, "=")
+		if !ok {
+			continue
+		}
+		key = strings.TrimSpace(key)
+		val = strings.Trim(strings.TrimSpace(val), `"'`)
+		if key != "" && os.Getenv(key) == "" {
+			_ = os.Setenv(key, val)
+		}
+	}
 }
